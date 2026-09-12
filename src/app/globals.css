@@ -12,6 +12,23 @@
   --font-mono: var(--font-geist-mono);
 }
 
+@theme {
+  --color-base: #0F172A;
+  --color-surface: #1E293B;
+  --color-surface-2: #334155;
+  --color-border: #2B3A50;
+  --color-action: #F97316;
+  --color-meta: #10B981;
+  --color-alerta: #F59E0B;
+  --color-critico: #EF4444;
+  --color-text: #F1F5F9;
+  --color-text-dim: #94A3B8;
+  --color-text-faint: #64748B;
+
+  --font-sans: var(--font-instrument-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -23,4 +40,30 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.input-field {
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #f97316;
+}
+
+.campo-input {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.campo-input:focus {
+  outline: none;
+  border-color: var(--color-action);
 }
