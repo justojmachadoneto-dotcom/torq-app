@@ -6,41 +6,63 @@ import { RelatorioPDF } from '@/lib/pdf/RelatorioPDF'
 export async function GET() {
   const supabase = await createClient()
 
-  const { data: veiculos } = await supabase
+  const respostaVeiculos = await supabase
     .from('veiculos')
     .select('*')
     .eq('ativo', true)
 
-  const veiculoAtivo = veiculos?.find((v) => v.eh_veiculo_ativo)
+  const veiculos = respostaVeiculos.data || []
+  const veiculoAtivo = veiculos.find((v: any) => v.eh_veiculo_ativo)
 
   if (!veiculoAtivo) {
-    return NextResponse.json({ erro: 'Nenhum veículo ativo' }, { status: 400 })
+    return NextResponse.json({ erro: 'Nenhum veiculo ativo' }, { status: 400 })
   }
 
-  const { data: manutencoes } = await supabase
+  const respostaManutencoes = await supabase
     .from('manutencoes')
     .select('id, tipo, data, valor_mao_obra, manutencao_pecas(valor_pago)')
     .eq('veiculo_id', veiculoAtivo.id)
 
-  const { data: abastecimentos } = await supabase
+  const respostaAbastecimentos = await supabase
     .from('abastecimentos')
     .select('valor_total, litros')
     .eq('veiculo_id', veiculoAtivo.id)
 
-  const totalMaoObra = (manutencoes || []).reduce((s, m) => s + (m.valor_mao_obra || 0), 0)
-  const totalPecas = (manutencoes || []).reduce((soma, m) => {
+  const manutencoes = respostaManutencoes.data || []
+  const abastecimentos = respostaAbastecimentos.data || []
+
+  const totalMaoObra = manutencoes.reduce((s: number, m: any) => s + (m.valor_mao_obra || 0), 0)
+
+  const totalPecas = manutencoes.reduce((soma: number, m: any) => {
     const pecas = m.manutencao_pecas || []
-    return soma + pecas.reduce((s, p) => s + (p.valor_pago || 0), 0)
+    const totalDaManutencao = pecas.reduce(
+      (s: number, p: any) => s + (p.valor_pago || 0),
+      0
+    )
+    return soma + totalDaManutencao
   }, 0)
-  const totalCombustivel = (abastecimentos || []).reduce((s, a) => s + (a.valor_total || 0), 0)
-  const litrosTotais = (abastecimentos || []).reduce((s, a) => s + (a.litros || 0), 0)
 
-  const preventivas = (manutencoes || []).filter((m) => m.tipo === 'preventiva').length
-  const corretivas = (manutencoes || []).filter((m) => m.tipo === 'corretiva').length
+  const totalCombustivel = abastecimentos.reduce(
+    (s: number, a: any) => s + (a.valor_total || 0),
+    0
+  )
 
-  const ultima = [...(manutencoes || [])].sort(
-    (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
-  )[0]
+  const litrosTotais = abastecimentos.reduce(
+    (s: number, a: any) => s + (a.litros || 0),
+    0
+  )
+
+  const preventivas = manutencoes.filter((m: any) => m.tipo === 'preventiva').length
+  const corretivas = manutencoes.filter((m: any) => m.tipo === 'corretiva').length
+
+  const ordenadas = [...manutencoes].sort((a: any, b: any) => {
+    return new Date(b.data).getTime() - new Date(a.data).getTime()
+  })
+  const ultima = ordenadas[0]
+
+  const ultimaManutencaoTexto = ultima
+    ? new Date(ultima.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+    : '-'
 
   const buffer = await renderToBuffer(
     RelatorioPDF({
@@ -52,9 +74,7 @@ export async function GET() {
         dataGeracao: new Date().toLocaleDateString('pt-BR'),
         preventivas,
         corretivas,
-        ultimaManutencao: ultima
-          ? new Date(ultima.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
-          : '—',
+        ultimaManutencao: ultimaManutencaoTexto,
         litrosTotais,
         totalCombustivel,
         totalManutencao: totalPecas + totalMaoObra,
@@ -63,10 +83,12 @@ export async function GET() {
     })
   )
 
-  return new NextResponse(buffer, {
+  const nomeArquivo = 'relatorio-' + veiculoAtivo.placa + '.pdf'
+
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="relatorio-${veiculoAtivo.placa}.pdf"`,
+      'Content-Disposition': 'attachment; filename="' + nomeArquivo + '"',
     },
   })
 }

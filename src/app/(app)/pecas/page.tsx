@@ -20,7 +20,7 @@ export default async function PecasPage() {
     .eq('ativo', true)
     .order('nome_marca')
 
-  const pecas = (resposta.data || []) as Peca[]
+  const pecas = (resposta.data || []) as unknown as Peca[]
 
   return (
     <div className="p-6 font-sans text-text">
